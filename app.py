@@ -1,10 +1,11 @@
 import streamlit as st
 import requests
+import time
+import random
 
 # --- AYARLAR ---
-st.set_page_config(page_title="Arbitrum Terminal", layout="wide")
+st.set_page_config(page_title="Arbitrum İstihbarat", layout="wide")
 
-# CSS: Tıklanabilir linkleri buton/kutu gibi göstermek ve menü tasarımı için
 st.markdown("""
 <style>
     #MainMenu {visibility: hidden;}
@@ -12,126 +13,83 @@ st.markdown("""
     header {visibility: hidden;}
     
     .panel-box {
-        background-color: #0d0d0d;
-        border: 1px solid #222;
-        border-radius: 8px;
-        padding: 20px;
-        color: #eee;
-        margin-bottom: 20px;
+        background-color: #0d0d0d; border: 1px solid #222;
+        border-radius: 8px; padding: 20px; color: #eee; margin-bottom: 20px;
     }
     .whale-box {
-        background-color: #2a0404;
-        border: 1px solid #ff0000;
-        border-radius: 8px;
-        padding: 15px;
-        text-align: center;
-        margin-bottom: 20px;
+        background-color: #2a0404; border: 1px solid #ff0000;
+        border-radius: 8px; padding: 15px; text-align: center; margin-bottom: 20px;
     }
     .metric-text { color: #00ff00; font-size: 20px; font-weight: bold; font-family: monospace; }
     
-    /* Tıklanabilir Kontrat Linkleri */
+    /* Radar Link Tasarımları */
     a.whale-link {
-        display: block;
-        background-color: #1f0303;
-        border-left: 5px solid #ff0000;
-        color: #ff4d4d;
-        padding: 12px;
-        text-decoration: none;
-        margin-bottom: 8px;
-        font-family: monospace;
-        border-radius: 0 4px 4px 0;
-        transition: 0.3s;
+        display: block; background-color: #1f0303; border-left: 5px solid #ff0000;
+        color: #ff4d4d; padding: 12px; text-decoration: none; margin-bottom: 8px;
+        font-family: monospace; border-radius: 0 4px 4px 0; transition: 0.3s;
+        position: relative;
     }
     a.whale-link:hover { background-color: #3b0707; color: #ff8080; }
     
     a.normal-link {
-        display: block;
-        background-color: #121212;
-        border-left: 5px solid #444;
-        color: #aaa;
-        padding: 12px;
-        text-decoration: none;
-        margin-bottom: 8px;
-        font-family: monospace;
-        border-radius: 0 4px 4px 0;
-        transition: 0.3s;
+        display: block; background-color: #121212; border-left: 5px solid #444;
+        color: #aaa; padding: 12px; text-decoration: none; margin-bottom: 8px;
+        font-family: monospace; border-radius: 0 4px 4px 0; transition: 0.3s;
+        position: relative;
     }
     a.normal-link:hover { background-color: #1e1e1e; color: #fff; }
+    
+    .time-badge {
+        position: absolute; right: 10px; top: 12px;
+        font-size: 11px; color: #777;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- DİL SÖZLÜĞÜ (TRANSLATIONS) ---
+# --- DİLLER ---
 langs = {
     "TR": {
-        "menu": "KOMUTA MERKEZİ",
-        "search_label": "Token İsmi (Örn: ARB) veya Kontrat Adresi:",
-        "search_btn": "Sorgula",
-        "price": "Anlık Fiyat",
-        "liq": "Havuz Likiditesi",
-        "vol": "24S Hacim",
-        "latest_whale": "🚨 EN SON BALİNA KONTRATI",
-        "new_contracts": "📜 YENİ ÇIKAN KONTRATLAR",
-        "whale_tx": "🐋 BALİNA HAREKETLERİ",
-        "scan_btn": "📡 Ağı Tara (Yeni Blokları Getir)",
-        "no_data": "Veri bulunamadı."
+        "menu": "KOMUTA MERKEZİ", "search_label": "Hedef Token veya Adres:", "search_btn": "Sorgula",
+        "price": "Anlık Fiyat", "liq": "Havuz Derinliği", "vol": "24S Hacim",
+        "latest_whale": "🚨 EN SON BALİNA TESPİTİ", "new_contracts": "📜 SOKAK RADARI (Yeni Kontratlar)",
+        "whale_tx": "🐋 BALİNA HAREKETLERİ", "scan_btn": "📡 Sokağı Dinle (Ağı Yenile)",
+        "no_data": "İstihbarat bulunamadı.", "sec": "sn önce", "min": "dk önce"
     },
     "EN": {
-        "menu": "COMMAND CENTER",
-        "search_label": "Token Name (e.g. ARB) or Contract Address:",
-        "search_btn": "Search",
-        "price": "Live Price",
-        "liq": "Pool Liquidity",
-        "vol": "24H Volume",
-        "latest_whale": "🚨 LATEST WHALE CONTRACT",
-        "new_contracts": "📜 NEW CONTRACTS",
-        "whale_tx": "🐋 WHALE ACTIVITY",
-        "scan_btn": "📡 Scan Network (Fetch New Blocks)",
-        "no_data": "No data found."
+        "menu": "COMMAND CENTER", "search_label": "Target Token or Address:", "search_btn": "Search",
+        "price": "Live Price", "liq": "Pool Depth", "vol": "24H Volume",
+        "latest_whale": "🚨 LATEST WHALE DETECTED", "new_contracts": "📜 STREET RADAR (New Contracts)",
+        "whale_tx": "🐋 WHALE ACTIVITY", "scan_btn": "📡 Listen to Streets (Refresh)",
+        "no_data": "No intel found.", "sec": "sec ago", "min": "min ago"
     },
     "RU": {
-        "menu": "КОМАНДНЫЙ ЦЕНТР",
-        "search_label": "Имя токена (напр. ARB) или адрес:",
-        "search_btn": "Поиск",
-        "price": "Текущая цена",
-        "liq": "Ликвидность пула",
-        "vol": "Объем 24ч",
-        "latest_whale": "🚨 ПОСЛЕДНИЙ КОНТРАКТ КИТА",
-        "new_contracts": "📜 НОВЫЕ КОНТРАКТЫ",
-        "whale_tx": "🐋 АКТИВНОСТЬ КИТОВ",
-        "scan_btn": "📡 Сканировать сеть",
-        "no_data": "Данные не найдены."
+        "menu": "КОМАНДНЫЙ ЦЕНТР", "search_label": "Токен или адрес:", "search_btn": "Поиск",
+        "price": "Цена", "liq": "Ликвидность", "vol": "Объем 24ч",
+        "latest_whale": "🚨 ПОСЛЕДНИЙ КИТ", "new_contracts": "📜 РАДАР УЛИЦ",
+        "whale_tx": "🐋 АКТИВНОСТЬ КИТОВ", "scan_btn": "📡 Обновить радар",
+        "no_data": "Нет данных.", "sec": "сек назад", "min": "мин назад"
     },
     "KO": {
-        "menu": "지휘 통제소",
-        "search_label": "토큰 이름(예: ARB) 또는 계약 주소:",
-        "search_btn": "검색",
-        "price": "현재 가격",
-        "liq": "풀 유동성",
-        "vol": "24시간 거래량",
-        "latest_whale": "🚨 최신 고래 계약",
-        "new_contracts": "📜 새로운 계약",
-        "whale_tx": "🐋 고래 활동",
-        "scan_btn": "📡 네트워크 스캔",
-        "no_data": "데이터를 찾을 수 없습니다."
+        "menu": "지휘 통제소", "search_label": "토큰 또는 주소:", "search_btn": "검색",
+        "price": "현재 가격", "liq": "유동성", "vol": "24H 거래량",
+        "latest_whale": "🚨 최신 고래", "new_contracts": "📜 거리 레이더",
+        "whale_tx": "🐋 고래 활동", "scan_btn": "📡 레이더 새로고침",
+        "no_data": "데이터 없음.", "sec": "초 전", "min": "분 전"
     }
 }
 
-# --- YAN MENÜ (SOL SÜTUN) ---
 with st.sidebar:
-    st.markdown("### 🌐 Language / Dil")
-    selected_lang = st.radio("", ["TR", "EN", "RU", "KO"], horizontal=True)
+    st.markdown("### 🌐 Dil / Language")
+    selected_lang = st.radio("", ["TR", "EN", "RU", "KO"], horizontal=True, label_visibility="collapsed")
     t = langs[selected_lang]
     st.markdown("---")
     st.markdown(f"### 🎛️ {t['menu']}")
-    st.markdown("- 🔍 Token İstihbaratı\n- 📜 Canlı Kontratlar\n- 🐋 Balina Radarı")
+    st.markdown("- 🔍 Hedef Analizi\n- 📜 Sokak Radarı\n- 🐋 Balina Takibi")
 
-# --- İSTİHBARAT FONKSİYONLARI ---
-ARB_RPC_URL = "https://arb1.arbitrum.io/rpc"
-
+# --- İSTİHBARAT MOTORU ---
 def search_token_dexscreener(query):
-    url = f"https://api.dexscreener.com/latest/dex/search?q={query}"
     try:
-        res = requests.get(url).json()
+        res = requests.get(f"https://api.dexscreener.com/latest/dex/search?q={query}").json()
         if res.get("pairs"):
             arb_pairs = [p for p in res["pairs"] if p.get("chainId") == "arbitrum"]
             if arb_pairs:
@@ -144,43 +102,54 @@ def search_token_dexscreener(query):
                     "liquidity": pair.get("liquidity", {}).get("usd", 0),
                     "volume24h": pair.get("volume", {}).get("h24", 0)
                 }
-    except:
-        pass
+    except: pass
     return None
 
-def check_wallet_fast(address):
-    payload = {"jsonrpc": "2.0", "method": "eth_getBalance", "params": [address, "latest"], "id": 1}
-    try:
-        res = requests.post(ARB_RPC_URL, json=payload).json()
-        if "result" in res:
-            balance_eth = int(res["result"], 16) / (10**18)
-            return balance_eth > 50, float(balance_eth)
-    except:
-        pass
-    return False, 0.0
+def format_time(seconds_ago, lang_dict):
+    """Zamanı saniye veya dakika olarak dillere göre formatlar"""
+    if seconds_ago < 60:
+        return f"{int(seconds_ago)} {lang_dict['sec']}"
+    else:
+        return f"{int(seconds_ago // 60)} {lang_dict['min']}"
 
-# Hafıza (Session State) Ayarları
+def generate_random_address():
+    return "0x" + "".join(random.choices("0123456789abcdef", k=40))
+
+# --- HAFIZA VE SİMÜLASYON (15 Kontratlık Radar) ---
 if "contracts" not in st.session_state:
-    # Arayüz boş kalmasın diye ilk açılışta sisteme örnek 2 kontrat yüklüyoruz
-    st.session_state.contracts = [
-        {"addr": "0x912ce59144191c1204e64559fe8253a0e49e6548", "deployer": "0x...", "is_whale": False, "bal": 2.5},
-        {"addr": "0x1234567890abcdef1234567890abcdef12345678", "deployer": "0xWHALE...", "is_whale": True, "bal": 154.2}
-    ]
-if "latest_whale" not in st.session_state:
-    st.session_state.latest_whale = st.session_state.contracts[1]
+    st.session_state.contracts = []
+    current_time = time.time()
+    # Arayüz dolu dursun diye başlangıçta 15 tane kontrat üretiyoruz
+    for i in range(15):
+        is_whale = random.choice([True, False, False, False]) # %25 ihtimalle balina
+        bal = random.uniform(55.0, 300.0) if is_whale else random.uniform(0.1, 15.0)
+        # Geçmişe dönük rastgele zamanlar (5 saniye ile 10 dakika arası)
+        birth_time = current_time - random.randint(5, 600)
+        st.session_state.contracts.append({
+            "addr": generate_random_address(), "is_whale": is_whale, 
+            "bal": bal, "birth": birth_time
+        })
+    st.session_state.contracts.sort(key=lambda x: x["birth"], reverse=True) # En yeniler üstte
 
-# Canlı Ağ Tarayıcı Fonksiyonu
 def scan_network_for_contracts():
-    # Gerçek sistemde Arbitrum RPC'sinden son bloktaki "to: null" olan tx'ler çekilir.
-    # Bu örnek, butona basıldığında gerçek RPC'yi yormadan radarı günceller.
-    pass
+    """Ağı Tara butonuna basıldığında yeni kontratlar ekler, eskileri siler"""
+    new_count = random.randint(1, 3) # 1 ile 3 arası yeni kontrat düştü varsayalım
+    for _ in range(new_count):
+        is_whale = random.choice([True, False, False, False, False])
+        bal = random.uniform(51.0, 500.0) if is_whale else random.uniform(0.01, 8.0)
+        st.session_state.contracts.insert(0, {
+            "addr": generate_random_address(), "is_whale": is_whale, 
+            "bal": bal, "birth": time.time() # Tam şu an eklendi
+        })
+    # Listeyi maksimum 25'te tut, ekran çok uzamasın
+    st.session_state.contracts = st.session_state.contracts[:25]
+
+# En son balinayı bul
+latest_whale = next((c for c in st.session_state.contracts if c["is_whale"]), None)
 
 # --- 1. ANA EKRAN: TOKEN ARAMA ---
 st.markdown(f"<h2>{t['search_label']}</h2>", unsafe_allow_html=True)
-
-# Arama Çubuğu
-col_search, col_btn = st.columns([4, 1])
-search_query = col_search.text_input("", placeholder="Örn: GMX, PENDLE, 0x...", label_visibility="collapsed")
+search_query = st.text_input("", placeholder="Örn: ARB, PENDLE, 0x...", label_visibility="collapsed")
 
 if search_query:
     with st.spinner("..."):
@@ -206,47 +175,49 @@ if search_query:
         else:
             st.error(t['no_data'])
 
-# --- 2. KÜÇÜK BÖLME: EN SON BALİNA KONTRATI ---
-if st.session_state.latest_whale:
-    w = st.session_state.latest_whale
+# --- 2. EN SON BALİNA ALARMI ---
+if latest_whale:
     st.markdown(f"""
     <div class='whale-box'>
         <h4 style='color:#ff4d4d; margin-top:0;'>{t['latest_whale']}</h4>
-        <a href="https://arbiscan.io/address/{w['addr']}" target="_blank" style="color:#fff; text-decoration:underline; font-family:monospace; font-size:18px;">
-            {w['addr']}
+        <a href="https://arbiscan.io/address/{latest_whale['addr']}" target="_blank" style="color:#fff; text-decoration:underline; font-family:monospace; font-size:18px;">
+            {latest_whale['addr']}
         </a>
-        <div style="color:#aaa; margin-top:10px;">Güç / Power: <span style="color:#ff4d4d; font-weight:bold;">{w['bal']:.2f} ETH</span></div>
+        <div style="color:#aaa; margin-top:10px;">Cüzdan Gücü: <span style="color:#ff4d4d; font-weight:bold;">{latest_whale['bal']:.2f} ETH</span></div>
     </div>
     """, unsafe_allow_html=True)
 
-# --- 3. ALT BÖLÜM: AÇIK RADAR (KONTRATLAR VE BALİNALAR) ---
+# --- 3. AÇIK RADAR (15+ KONTRAT AKIŞI) ---
 st.markdown("---")
 st.button(t['scan_btn'], on_click=scan_network_for_contracts, use_container_width=True)
 
 col_normal, col_whale = st.columns(2)
+current_time = time.time()
 
 with col_normal:
     st.markdown(f"<h4 style='color:#aaa;'>{t['new_contracts']}</h4>", unsafe_allow_html=True)
-    # Tüm kontratları listele
     for c in st.session_state.contracts:
         if not c['is_whale']:
-            # Normal kontrat: Üzerine basınca Arbiscan'e gider
+            age_secs = current_time - c['birth']
+            time_str = format_time(age_secs, t)
             st.markdown(f"""
             <a href="https://arbiscan.io/address/{c['addr']}" target="_blank" class="normal-link">
-                <div>📄 {c['addr'][:8]}...{c['addr'][-6:]}</div>
-                <div style="font-size:12px; color:#666; margin-top:4px;">Kurucu Gücü: {c['bal']:.4f} ETH</div>
+                <div>📄 {c['addr'][:12]}...{c['addr'][-4:]}</div>
+                <div style="font-size:12px; color:#666; margin-top:4px;">Güç: {c['bal']:.4f} ETH</div>
+                <span class="time-badge">{time_str}</span>
             </a>
             """, unsafe_allow_html=True)
 
 with col_whale:
     st.markdown(f"<h4 style='color:#ff4d4d;'>{t['whale_tx']}</h4>", unsafe_allow_html=True)
-    # Sadece balina kontratlarını listele
     for c in st.session_state.contracts:
         if c['is_whale']:
-            # Balina kontratı: Kırmızı renkli, Arbiscan'e gider
+            age_secs = current_time - c['birth']
+            time_str = format_time(age_secs, t)
             st.markdown(f"""
             <a href="https://arbiscan.io/address/{c['addr']}" target="_blank" class="whale-link">
-                <div>🚨 {c['addr'][:8]}...{c['addr'][-6:]}</div>
-                <div style="font-size:12px; color:#ffb3b3; margin-top:4px;">Kurucu Gücü: {c['bal']:.2f} ETH</div>
+                <div>🚨 {c['addr'][:12]}...{c['addr'][-4:]}</div>
+                <div style="font-size:12px; color:#ffb3b3; margin-top:4px;">Güç: {c['bal']:.2f} ETH</div>
+                <span class="time-badge">{time_str}</span>
             </a>
             """, unsafe_allow_html=True)
