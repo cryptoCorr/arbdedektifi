@@ -5,97 +5,94 @@ import time
 import random
 
 # --- AYARLAR ---
-st.set_page_config(page_title="Arbitrum İstihbarat", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="ARB Terminal", layout="wide", initial_sidebar_state="collapsed")
 
 # --- ÜST BAR: DİL VE TEMA SEÇİMİ ---
 col_title, col_theme, col_lang = st.columns([4, 1, 1])
 with col_title:
-    st.markdown("<h2 style='margin:0;'>🕵️‍♂️ ARB SAVAŞ ODASI</h2>", unsafe_allow_html=True)
+    st.markdown("<h3 style='margin:0; font-family:monospace; color:#ccc; letter-spacing: 2px;'>ARB INTELLIGENCE TERMINAL</h3>", unsafe_allow_html=True)
 with col_theme:
-    theme_choice = st.radio("Tema", ["Karanlık (Göz Yormayan)", "Aydınlık (Beyaz)"], label_visibility="collapsed")
+    theme_choice = st.radio("Tema", ["Karanlık", "Aydınlık"], label_visibility="collapsed")
 with col_lang:
     lang_choice = st.radio("Dil", ["TR", "EN"], horizontal=True, label_visibility="collapsed")
 
-st.markdown("<hr style='margin-top:5px; margin-bottom:15px; border-color:#333;'>", unsafe_allow_html=True)
+st.markdown("<hr style='margin-top:5px; margin-bottom:15px; border-color:#222;'>", unsafe_allow_html=True)
 
-# --- DİNAMİK TEMA VE MOBİL UYUM (CSS) ---
-if theme_choice == "Karanlık (Göz Yormayan)":
-    bg_app = "#121212"    # Göz yormayan yumuşak karanlık
-    bg_panel = "#1e1e1e"  # Hafif açık panel rengi
-    text_main = "#e0e0e0"
-    text_sub = "#999999"
-    border_col = "#2a2a2a"
+# --- DİNAMİK TEMA (CSS) ---
+if theme_choice == "Karanlık":
+    bg_app, bg_panel, text_main, text_sub, border_col = "#0a0a0a", "#121212", "#d4d4d4", "#777777", "#222222"
 else:
-    bg_app = "#f8f9fa"
-    bg_panel = "#ffffff"
-    text_main = "#111111"
-    text_sub = "#555555"
-    border_col = "#dddddd"
+    bg_app, bg_panel, text_main, text_sub, border_col = "#f4f4f5", "#ffffff", "#18181b", "#71717a", "#e4e4e7"
 
 st.markdown(f"""
 <style>
     #MainMenu {{visibility: hidden;}} footer {{visibility: hidden;}} header {{visibility: hidden;}}
-    .block-container {{ padding-top: 1rem; padding-bottom: 1rem; max-width: 1200px; }}
+    .block-container {{ padding-top: 1rem; padding-bottom: 1rem; max-width: 1400px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }}
     
-    /* Arka Planı Zorla Değiştir */
     [data-testid="stAppViewContainer"] {{ background-color: {bg_app}; color: {text_main}; }}
     [data-testid="stHeader"] {{ background-color: {bg_app}; }}
     
-    .panel-box {{ background-color: {bg_panel}; border: 1px solid {border_col}; border-radius: 8px; padding: 15px; margin-bottom: 20px; word-wrap: break-word; }}
+    .panel-box {{ background-color: {bg_panel}; border: 1px solid {border_col}; padding: 20px; margin-bottom: 20px; border-radius: 6px; }}
     
-    .security-box-clean {{ background-color: rgba(0, 255, 0, 0.05); border: 1px solid #00aa00; border-radius: 6px; padding: 12px; text-align: center; color: {text_main}; }}
-    .security-box-danger {{ background-color: rgba(255, 0, 0, 0.1); border: 1px solid #cc0000; border-radius: 6px; padding: 12px; text-align: center; color: {text_main}; animation: pulse 2s infinite; }}
+    .sec-clean {{ border-left: 3px solid #22c55e; padding: 10px 15px; background-color: rgba(34, 197, 94, 0.05); margin-top:5px; }}
+    .sec-danger {{ border-left: 3px solid #ef4444; padding: 10px 15px; background-color: rgba(239, 68, 68, 0.05); margin-top:5px; }}
     
-    @keyframes pulse {{ 0% {{ box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.3); }} 70% {{ box-shadow: 0 0 0 8px rgba(255, 0, 0, 0); }} 100% {{ box-shadow: 0 0 0 0 rgba(255, 0, 0, 0); }} }}
+    .supply-warn {{ color: #ef4444; font-size: 13px; font-weight: 600; margin-top: 5px; }}
+    .supply-safe {{ color: #22c55e; font-size: 13px; font-weight: 600; margin-top: 5px; }}
     
-    .metric-val {{ font-size: 20px; font-weight: bold; font-family: monospace; color: {text_main}; }}
-    .metric-label {{ color: {text_sub}; font-size: 12px; text-transform: uppercase; font-weight: bold; margin-bottom: 3px; }}
+    .metric-val {{ font-size: 20px; font-weight: 600; font-family: monospace; color: {text_main}; }}
+    .metric-label {{ color: {text_sub}; font-size: 11px; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; margin-bottom: 4px; }}
     
-    /* Sosyal Medya Butonları - Token Altı İçin */
-    .social-container {{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; margin-bottom: 15px; }}
-    a.social-btn {{ background-color: {bg_app}; color: #4da6ff; padding: 6px 12px; border-radius: 4px; border: 1px solid {border_col}; text-decoration: none; font-size: 13px; display: inline-flex; align-items: center; transition: 0.2s; }}
-    a.social-btn:hover {{ background-color: #2a2a2a; color: #fff; }}
+    .social-container {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }}
+    a.social-btn {{ color: {text_sub}; font-size: 12px; text-decoration: none; padding: 4px 0; border-bottom: 1px solid transparent; transition: 0.2s; }}
+    a.social-btn:hover {{ color: {text_main}; border-bottom: 1px solid {text_main}; }}
     
-    /* Sade Radar Linkleri */
-    a.radar-link {{ display: block; background-color: {bg_panel}; border: 1px solid {border_col}; color: {text_main}; padding: 12px; text-decoration: none; margin-bottom: 6px; border-radius: 6px; transition: 0.2s; position: relative; word-wrap: break-word; }}
-    a.radar-link:hover {{ border-color: #555; }}
-    .radar-whale {{ border-left: 4px solid #ff4444 !important; }}
-    .radar-normal {{ border-left: 4px solid #4da6ff !important; }}
+    .radar-header {{ font-size: 12px; font-weight: 600; color: {text_main}; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid {border_col}; padding-bottom: 5px; }}
+    .radar-row {{ display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid {border_col}; font-family: monospace; font-size: 13px; text-decoration: none; color: {text_main}; transition: background 0.2s; background-color: {bg_panel}; }}
+    .radar-row:hover {{ background-color: rgba(100,100,100,0.05); }}
     
-    .radar-top {{ display: flex; justify-content: space-between; font-family: monospace; font-size: 14px; margin-bottom: 4px; }}
-    .radar-bottom {{ font-size: 12px; color: {text_sub}; display: flex; justify-content: space-between; }}
-    .tx-buy {{ color: #00cc00; font-weight: bold; }}
-    .tx-sell {{ color: #ff4444; font-weight: bold; }}
-    .tx-deploy {{ color: #aaaaaa; font-weight: bold; }}
+    .txt-green {{ color: #22c55e; font-weight: bold; }}
+    .txt-red {{ color: #ef4444; font-weight: bold; }}
+    .txt-muted {{ color: {text_sub}; font-size: 11px; }}
+    
+    .badge-high {{ background-color: rgba(34, 197, 94, 0.1); color: #22c55e; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(34, 197, 94, 0.3); font-weight: bold; }}
+    .badge-mid {{ background-color: rgba(234, 179, 8, 0.1); color: #eab308; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(234, 179, 8, 0.3); font-weight: bold; }}
+    .badge-low {{ background-color: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: bold; }}
 </style>
 """, unsafe_allow_html=True)
 
 # --- DİL SÖZLÜĞÜ ---
 langs = {
     "TR": {
-        "search": "🔍 Hedef Ara (Token İsmi veya 0x... Adresi):",
+        "search": "Hedef Ara (Token Sembolü veya Adresi):",
         "price": "FİYAT", "liq": "LİKİDİTE", "vol": "24S HACİM", "tax": "VERGİ (AL/SAT)",
-        "sec_title": "GÜVENLİK PUANI (100 ÜZERİNDEN)", 
-        "sec_desc": "Kriterler: Honeypot (Tuzak) riski, açık kaynak kod ve vergi (tax) oranları.",
-        "honey": "Durum", "clean": "TEMİZ ✅", "danger": "TUZAK 🚨",
-        "creator": "Kurucu Cüzdan", "web": "Web Sitesi",
-        "radar_title": "📡 SOKAK RADARI (Alış, Satış ve Yeni Kontratlar)",
-        "scan_btn": "🔄 Radarı Güncelle", "no_data": "Hedef bulunamadı."
+        "supply_title": "MAKRO EKONOMİ & ARZ (TOKENOMICS)",
+        "mcap": "PİYASA DEĞERİ (MCAP)", "fdv": "TAM SEYRELTİLMİŞ (FDV)", "ratio": "DOLAŞIM ORANI",
+        "warn_inf": "⚠️ YÜKSEK ENFLASYON RİSKİ: Tokenların çoğu kilitli, satış baskısı gelebilir.",
+        "safe_inf": "✅ SAĞLIKLI DOLAŞIM: Token arzının büyük kısmı piyasada.",
+        "sec_title": "SİSTEM GÜVENLİK ANALİZİ", "clean": "TEMİZ KOD", "danger": "YÜKSEK RİSK (HONEYPOT)",
+        "creator": "Kurucu Cüzdan", "web": "Web Adresi", "twitter": "X (Twitter)", "tg": "Telegram",
+        "radar_flow": "BALİNA RADARI (ALIM / SATIM)", "radar_contracts": "BALİNA RADARI (AKILLI KONTRATLAR)",
+        "new_tokens": "AĞDA YENİ ÇIKAN TOKENLAR VE GÜVENLİK ANALİZİ",
+        "scan_btn": "Sistemi Güncelle", "no_data": "Geçerli veri bulunamadı."
     },
     "EN": {
-        "search": "🔍 Search Target (Token Name or 0x... Address):",
+        "search": "Search Target (Token Symbol or Address):",
         "price": "PRICE", "liq": "LIQUIDITY", "vol": "24H VOL", "tax": "TAX (B/S)",
-        "sec_title": "SECURITY SCORE (OUT OF 100)", 
-        "sec_desc": "Criteria: Honeypot risk, open-source code, and tax rates.",
-        "honey": "Status", "clean": "SAFE ✅", "danger": "HONEYPOT 🚨",
-        "creator": "Deployer", "web": "Website",
-        "radar_title": "📡 STREET RADAR (Buys, Sells & Deploys)",
-        "scan_btn": "🔄 Refresh Radar", "no_data": "Target not found."
+        "supply_title": "MACRO ECONOMICS & SUPPLY",
+        "mcap": "MARKET CAP", "fdv": "FULLY DILUTED (FDV)", "ratio": "CIRCULATION RATIO",
+        "warn_inf": "⚠️ HIGH INFLATION RISK: Majority of tokens are locked. Dump risk is high.",
+        "safe_inf": "✅ HEALTHY CIRCULATION: Most of the supply is unlocked.",
+        "sec_title": "SYSTEM SECURITY ANALYSIS", "clean": "CLEAN CODE", "danger": "HIGH RISK (HONEYPOT)",
+        "creator": "Deployer Wallet", "web": "Website", "twitter": "X (Twitter)", "tg": "Telegram",
+        "radar_flow": "WHALE RADAR (BUY / SELL)", "radar_contracts": "WHALE RADAR (SMART CONTRACTS)",
+        "new_tokens": "NEWLY DEPLOYED TOKENS & SECURITY ANALYSIS",
+        "scan_btn": "Update System", "no_data": "Valid data not found."
     }
 }
 t = langs[lang_choice]
 
-# --- İSTİHBARAT APİLERİ ---
+# --- API FONKSİYONLARI ---
 def search_token_dexscreener(query):
     try:
         res = requests.get(f"https://api.dexscreener.com/latest/dex/search?q={query}").json()
@@ -111,6 +108,8 @@ def search_token_dexscreener(query):
                     "priceUsd": pair.get("priceUsd", "0"),
                     "liquidity": pair.get("liquidity", {}).get("usd", 0),
                     "volume24h": pair.get("volume", {}).get("h24", 0),
+                    "fdv": pair.get("fdv", 0),
+                    "marketCap": pair.get("marketCap", 0),
                     "info": pair.get("info", {})
                 }
     except: pass
@@ -124,134 +123,145 @@ def check_security_goplus(address):
             data = res["result"][address]
             is_honey = data.get("is_honeypot", "0") == "1"
             is_open = data.get("is_open_source", "0") == "1"
-            try: b_tax = float(data.get("buy_tax", "0")) * 100
-            except: b_tax = 0.0
-            try: s_tax = float(data.get("sell_tax", "0")) * 100
-            except: s_tax = 0.0
-
+            try: b_tax, s_tax = float(data.get("buy_tax", "0")) * 100, float(data.get("sell_tax", "0")) * 100
+            except: b_tax, s_tax = 0.0, 0.0
+            
             score = 100
             if is_honey: score -= 100
             if not is_open: score -= 20
             if b_tax > 10: score -= 15
             if s_tax > 10: score -= 15
-            
             return {"is_honeypot": is_honey, "score": max(0, score), "buy_tax": b_tax, "sell_tax": s_tax}
     except: pass
     return {"is_honeypot": False, "score": "-", "buy_tax": "-", "sell_tax": "-"}
 
-# --- RADAR SİMÜLASYONU (ALIŞ, SATIŞ, YENİ KONTRAT) ---
-tx_types = ["YENİ KONTRAT", "ALIŞ (BUY)", "SATIŞ (SELL)"]
+def format_money(value):
+    if value >= 1_000_000_000: return f"${value/1_000_000_000:.2f}B"
+    elif value >= 1_000_000: return f"${value/1_000_000:.2f}M"
+    elif value >= 1_000: return f"${value/1_000:.2f}K"
+    return f"${value:.0f}"
 
-def generate_tx():
-    is_whale = random.choice([True, False, False])
-    tx_type = random.choice(tx_types)
-    addr = "0x" + "".join(random.choices("0123456789abcdef", k=40))
-    bal = random.uniform(50.0, 500.0) if is_whale else random.uniform(0.1, 15.0)
-    return {"addr": addr, "is_whale": is_whale, "type": tx_type, "bal": bal, "time": time.time()}
+# --- RADAR VERİ SİMÜLASYONU ---
+def gen_addr(): return "0x" + "".join(random.choices("0123456789abcdef", k=40))
 
-if "radar_txs" not in st.session_state:
-    st.session_state.radar_txs = [generate_tx() for _ in range(10)]
-    for tx in st.session_state.radar_txs:
-        tx["time"] -= random.randint(5, 120)
-    st.session_state.radar_txs.sort(key=lambda x: x["time"], reverse=True)
+if "order_flow" not in st.session_state:
+    st.session_state.order_flow = [{"addr": gen_addr(), "type": random.choice(["BUY", "SELL"]), "val": random.uniform(20.0, 300.0), "time": time.time() - random.randint(5, 120)} for _ in range(6)]
+    st.session_state.order_flow.sort(key=lambda x: x["time"], reverse=True)
 
-def update_radar():
-    for _ in range(random.randint(1, 3)):
-        st.session_state.radar_txs.insert(0, generate_tx())
-    st.session_state.radar_txs = st.session_state.radar_txs[:15]
+if "whale_contracts" not in st.session_state:
+    st.session_state.whale_contracts = [{"addr": gen_addr(), "action": random.choice(["Deploy", "Execute", "Approve"]), "val": random.uniform(5.0, 50.0), "time": time.time() - random.randint(5, 120)} for _ in range(6)]
+    st.session_state.whale_contracts.sort(key=lambda x: x["time"], reverse=True)
 
-# --- ANA EKRAN: ARAMA VE ANALİZ ---
+if "new_tokens" not in st.session_state:
+    st.session_state.new_tokens = [{"addr": gen_addr(), "score": random.randint(10, 100), "time": time.time() - random.randint(5, 300)} for _ in range(8)]
+    st.session_state.new_tokens.sort(key=lambda x: x["time"], reverse=True)
+
+def update_system():
+    for _ in range(random.randint(1, 2)): st.session_state.order_flow.insert(0, {"addr": gen_addr(), "type": random.choice(["BUY", "SELL"]), "val": random.uniform(20.0, 400.0), "time": time.time()})
+    st.session_state.order_flow = st.session_state.order_flow[:6]
+    for _ in range(random.randint(1, 2)): st.session_state.whale_contracts.insert(0, {"addr": gen_addr(), "action": random.choice(["Deploy", "Execute", "Approve"]), "val": random.uniform(5.0, 80.0), "time": time.time()})
+    st.session_state.whale_contracts = st.session_state.whale_contracts[:6]
+    for _ in range(1): st.session_state.new_tokens.insert(0, {"addr": gen_addr(), "score": random.randint(10, 100), "time": time.time()})
+    st.session_state.new_tokens = st.session_state.new_tokens[:8]
+
+# --- 1. ANA EKRAN: ARAMA VE İSTİHBARAT ---
 search_query = st.text_input("", placeholder=t['search'])
 
 if search_query:
-    with st.spinner("İstihbarat toplanıyor..."):
+    with st.spinner("Ağ taranıyor..."):
         token = search_token_dexscreener(search_query)
         if token:
             security = check_security_goplus(token['address'])
-            
             st.markdown("<div class='panel-box'>", unsafe_allow_html=True)
             
-            # KİMLİK BİLGİLERİ
-            st.markdown(f"<h3 style='margin:0; color:{text_main};'>{token['name']} <span style='color:{text_sub};'>({token['symbol']})</span></h3>", unsafe_allow_html=True)
-            st.markdown(f"<div style='color:#00cc00; font-family:monospace; font-size:14px; margin-top:5px; word-wrap:break-word;'>Adres: {token['address']}</div>", unsafe_allow_html=True)
+            # KİMLİK & SOSYAL LİNKLER
+            st.markdown(f"<div style='font-size:24px; font-weight:600;'>{token['name']} <span style='color:{text_sub}; font-weight:400;'>{token['symbol']}</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='color:{text_sub}; font-family:monospace; font-size:13px; margin-top:2px;'>{token['address']}</div>", unsafe_allow_html=True)
             
-            # X (TWITTER) VE DİĞER SOSYAL BAĞLANTILAR TAM BURADA
-            html_links = f"<div class='social-container'>"
-            html_links += f"<a href='https://arbiscan.io/address/{token['address']}#code' target='_blank' class='social-btn'>🕵️‍♂️ {t['creator']}</a>"
-            
+            html_links = f"<div class='social-container'><a href='https://arbiscan.io/address/{token['address']}#code' target='_blank' class='social-btn'>[ {t['creator']} ]</a>"
             info = token['info']
             if info:
-                for web in info.get("websites", []):
-                    html_links += f"<a href='{web['url']}' target='_blank' class='social-btn'>🌐 {t['web']}</a>"
+                for web in info.get("websites", []): html_links += f"<a href='{web['url']}' target='_blank' class='social-btn'>[ {t['web']} ]</a>"
                 for social in info.get("socials", []):
-                    icon = "🐦 X (Twitter)" if social['type'] == "twitter" else "✈️ Telegram" if social['type'] == "telegram" else "🔗 Link"
-                    html_links += f"<a href='{social['url']}' target='_blank' class='social-btn'>{icon}</a>"
+                    name = t['twitter'] if social['type'] == "twitter" else t['tg'] if social['type'] == "telegram" else "Link"
+                    html_links += f"<a href='{social['url']}' target='_blank' class='social-btn'>[ {name} ]</a>"
             html_links += "</div>"
             st.markdown(html_links, unsafe_allow_html=True)
             
-            st.markdown(f"<hr style='border-color:{border_col}; margin:10px 0px 15px 0px;'>", unsafe_allow_html=True)
+            st.markdown(f"<hr style='border-color:{border_col}; margin:20px 0;'>", unsafe_allow_html=True)
             
-            # METRİKLER (Mobil için otomatik alt alta geçer)
-            m1, m2, m3, m4 = st.columns(4)
-            with m1: st.markdown(f"<div class='metric-label'>{t['price']}</div><div class='metric-val' style='color:#00cc00;'>${float(token['priceUsd']):.6f}</div>", unsafe_allow_html=True)
-            with m2: st.markdown(f"<div class='metric-label'>{t['liq']}</div><div class='metric-val'>${token['liquidity']:,.0f}</div>", unsafe_allow_html=True)
-            with m3: st.markdown(f"<div class='metric-label'>{t['vol']}</div><div class='metric-val'>${token['volume24h']:,.0f}</div>", unsafe_allow_html=True)
-            with m4: st.markdown(f"<div class='metric-label'>{t['tax']}</div><div class='metric-val' style='color:#ffaa00;'>%{security['buy_tax']} / %{security['sell_tax']}</div>", unsafe_allow_html=True)
+            # 1. SATIR: PİYASA METRİKLERİ VE VERGİ
+            c1, c2, c3, c4 = st.columns(4)
+            with c1: st.markdown(f"<div class='metric-label'>{t['price']}</div><div class='metric-val'>${float(token['priceUsd']):.6f}</div>", unsafe_allow_html=True)
+            with c2: st.markdown(f"<div class='metric-label'>{t['liq']}</div><div class='metric-val'>{format_money(token['liquidity'])}</div>", unsafe_allow_html=True)
+            with c3: st.markdown(f"<div class='metric-label'>{t['vol']}</div><div class='metric-val'>{format_money(token['volume24h'])}</div>", unsafe_allow_html=True)
+            with c4: st.markdown(f"<div class='metric-label'>{t['tax']}</div><div class='metric-val txt-muted'>%{security['buy_tax']} / %{security['sell_tax']}</div>", unsafe_allow_html=True)
 
-            st.markdown(f"<hr style='border-color:{border_col}; margin:15px 0px;'>", unsafe_allow_html=True)
+            st.markdown(f"<hr style='border-color:{border_col}; margin:20px 0;'>", unsafe_allow_html=True)
             
-            # GÜVENLİK PUANI (Açıklamalı)
-            st.markdown(f"<div class='metric-label' style='font-size:14px;'>🛡️ {t['sec_title']}</div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='color:{text_sub}; font-size:11px; margin-bottom:10px;'>{t['sec_desc']}</div>", unsafe_allow_html=True)
+            # 2. SATIR: ARZ VE TOKENOMICS (YENİ EKLENDİ)
+            fdv = float(token.get('fdv', 0))
+            mcap = float(token.get('marketCap', 0))
+            if mcap == 0 and fdv > 0: mcap = fdv # Eğer API mcap vermediyse FDV'ye eşitle
             
-            if security['is_honeypot']:
-                st.markdown(f"<div class='security-box-danger'><h3 style='margin:0; color:#ff3333;'>{t['danger']}</h3><div style='font-size:18px; font-weight:bold;'>Skor: {security['score']}/100</div></div>", unsafe_allow_html=True)
-            else:
-                score_color = "#00cc00" if security['score'] != "-" and int(security['score']) > 80 else "#ffcc00"
-                st.markdown(f"<div class='security-box-clean'><h3 style='margin:0; color:#00cc00;'>{t['clean']}</h3><div style='font-size:18px; font-weight:bold;'>Skor: <span style='color:{score_color}'>{security['score']}/100</span></div></div>", unsafe_allow_html=True)
+            ratio = (mcap / fdv * 100) if fdv > 0 else 100
+            ratio_color = "#ef4444" if ratio < 40 else "#22c55e" # %40 altı tehlikeli
+            
+            st.markdown(f"<div class='metric-label' style='font-size:13px;'>🏦 {t['supply_title']}</div>", unsafe_allow_html=True)
+            s1, s2, s3 = st.columns(3)
+            with s1: st.markdown(f"<div class='metric-label'>{t['mcap']}</div><div class='metric-val'>{format_money(mcap)}</div>", unsafe_allow_html=True)
+            with s2: st.markdown(f"<div class='metric-label'>{t['fdv']}</div><div class='metric-val'>{format_money(fdv)}</div>", unsafe_allow_html=True)
+            with s3: st.markdown(f"<div class='metric-label'>{t['ratio']}</div><div class='metric-val' style='color:{ratio_color};'>%{ratio:.1f}</div>", unsafe_allow_html=True)
+            
+            if ratio < 40 and fdv > 0:
+                st.markdown(f"<div class='supply-warn'>{t['warn_inf']}</div>", unsafe_allow_html=True)
+            elif ratio >= 80 and fdv > 0:
+                st.markdown(f"<div class='supply-safe'>{t['safe_inf']}</div>", unsafe_allow_html=True)
+
+            st.markdown(f"<hr style='border-color:{border_col}; margin:20px 0;'>", unsafe_allow_html=True)
+            
+            # 3. SATIR: GÜVENLİK ANALİZİ
+            st.markdown(f"<div class='metric-label' style='font-size:13px;'>🛡️ {t['sec_title']}</div>", unsafe_allow_html=True)
+            if security['is_honeypot']: st.markdown(f"<div class='sec-danger'><span style='color:#ef4444; font-weight:600;'>{t['danger']}</span> | Sistem Skoru: {security['score']}/100</div>", unsafe_allow_html=True)
+            else: st.markdown(f"<div class='sec-clean'><span style='color:#22c55e; font-weight:600;'>{t['clean']}</span> | Sistem Skoru: {security['score']}/100</div>", unsafe_allow_html=True)
+            
             st.markdown("</div>", unsafe_allow_html=True)
             
-            # CANLI GRAFİK
-            chart_theme = "dark" if theme_choice == "Karanlık (Göz Yormayan)" else "light"
-            components.iframe(f"https://dexscreener.com/arbitrum/{token['pairAddress']}?embed=1&theme={chart_theme}", height=400, scrolling=False)
-            
+            # GRAFİK
+            chart_theme = "dark" if theme_choice == "Karanlık" else "light"
+            components.iframe(f"https://dexscreener.com/arbitrum/{token['pairAddress']}?embed=1&theme={chart_theme}", height=450, scrolling=False)
         else:
             st.error(t['no_data'])
 
-# --- ALT EKRAN: SADE VE MOBİL UYUMLU RADAR ---
-st.markdown(f"<br><h4 style='color:{text_main}; margin-bottom:10px;'>{t['radar_title']}</h4>", unsafe_allow_html=True)
-st.button(t['scan_btn'], on_click=update_radar, use_container_width=True)
+# --- 2. ORTA BÖLÜM: BALİNA RADARI ---
+st.markdown(f"<br>", unsafe_allow_html=True)
+st.button(t['scan_btn'], on_click=update_system, use_container_width=True)
+st.markdown(f"<br>", unsafe_allow_html=True)
 
 curr_time = time.time()
+col_flow, col_contracts = st.columns(2)
 
-# Mobil uyumluluk için tek sütun veya iki sütun ayarı (Streamlit bunu mobilde otomatik alt alta dizer)
-r1, r2 = st.columns(2)
+with col_flow:
+    st.markdown(f"<div class='radar-header'>{t['radar_flow']}</div>", unsafe_allow_html=True)
+    for flow in st.session_state.order_flow:
+        age = int(curr_time - flow['time'])
+        time_str = f"{age}s" if age < 60 else f"{age//60}m"
+        color_cls = "txt-green" if flow['type'] == "BUY" else "txt-red"
+        st.markdown(f"<a href='https://arbiscan.io/address/{flow['addr']}' target='_blank' class='radar-row'><span class='{color_cls}'>[{flow['type']}]</span><span>{flow['val']:.1f} ETH</span><span class='txt-muted'>{time_str}</span></a>", unsafe_allow_html=True)
 
-for i, tx in enumerate(st.session_state.radar_txs):
-    age = int(curr_time - tx['time'])
-    time_str = f"{age} sn önce" if age < 60 else f"{age//60} dk önce"
-    
-    # Renk ve İkon Sınıflandırması
-    radar_class = "radar-whale" if tx['is_whale'] else "radar-normal"
-    whale_icon = "🚨 BALİNA" if tx['is_whale'] else "👤 Standart"
-    
-    tx_color_class = "tx-buy" if "BUY" in tx['type'] or "ALIŞ" in tx['type'] else "tx-sell" if "SELL" in tx['type'] or "SATIŞ" in tx['type'] else "tx-deploy"
-    
-    card_html = f"""
-    <a href='https://arbiscan.io/address/{tx['addr']}' target='_blank' class='radar-link {radar_class}'>
-        <div class='radar-top'>
-            <span style='color:{"#ff4444" if tx['is_whale'] else text_main};'>{tx['addr'][:8]}...{tx['addr'][-6:]}</span>
-            <span>{time_str}</span>
-        </div>
-        <div class='radar-bottom'>
-            <span class='{tx_color_class}'>[{tx['type']}] {whale_icon}</span>
-            <span>Hacim: {tx['bal']:.1f} ETH</span>
-        </div>
-    </a>
-    """
-    
-    # Sırayla sağ ve sol sütunlara dağıt
-    if i % 2 == 0:
-        r1.markdown(card_html, unsafe_allow_html=True)
-    else:
-        r2.markdown(card_html, unsafe_allow_html=True)
+with col_contracts:
+    st.markdown(f"<div class='radar-header'>{t['radar_contracts']}</div>", unsafe_allow_html=True)
+    for contract in st.session_state.whale_contracts:
+        age = int(curr_time - contract['time'])
+        time_str = f"{age}s" if age < 60 else f"{age//60}m"
+        st.markdown(f"<a href='https://arbiscan.io/address/{contract['addr']}' target='_blank' class='radar-row'><span>{contract['addr'][:10]}...</span><span style='color:{text_sub};'>[{contract['action']}]</span><span class='txt-muted'>{time_str}</span></a>", unsafe_allow_html=True)
+
+# --- 3. EN ALT BÖLÜM: YENİ TOKENLAR ---
+st.markdown(f"<br><br><div class='radar-header'>{t['new_tokens']}</div>", unsafe_allow_html=True)
+
+for token in st.session_state.new_tokens:
+    age = int(curr_time - token['time'])
+    time_str = f"{age}s" if age < 60 else f"{age//60}m"
+    badge_cls = "badge-high" if token['score'] >= 80 else "badge-mid" if token['score'] >= 50 else "badge-low"
+
+    st.markdown(f"<a href='https://arbiscan.io/address/{token['addr']}' target='_blank' class='radar-row' style='margin-bottom: 5px; border-radius: 6px;'><span style='font-family:monospace;'>{token['addr']}</span><span class='{badge_cls}'>Skor: {token['score']}/100</span><span class='txt-muted'>{time_str}</span></a>", unsafe_allow_html=True)
