@@ -1,4 +1,4 @@
-import streamlit as st
+  import streamlit as st
 import streamlit.components.v1 as components
 import requests
 import time
@@ -44,8 +44,9 @@ st.markdown(f"""
     .metric-label {{ color: {text_sub}; font-size: 11px; text-transform: uppercase; font-weight: 600; letter-spacing: 1px; margin-bottom: 4px; }}
     
     .social-container {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }}
-    a.social-btn {{ color: {text_sub}; font-size: 12px; text-decoration: none; padding: 4px 0; border-bottom: 1px solid transparent; transition: 0.2s; }}
-    a.social-btn:hover {{ color: {text_main}; border-bottom: 1px solid {text_main}; }}
+    a.social-btn {{ color: {text_sub}; font-size: 12px; text-decoration: none; padding: 4px 6px; border: 1px solid transparent; border-bottom: 1px solid {border_col}; transition: 0.2s; border-radius: 4px; }}
+    a.social-btn:hover {{ color: {text_main}; background-color: rgba(255,255,255,0.05); border-color: {text_main}; }}
+    a.holders-btn {{ color: #eab308; border-bottom: 1px solid #eab308; }}
     
     .radar-header {{ font-size: 12px; font-weight: 600; color: {text_main}; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid {border_col}; padding-bottom: 5px; }}
     .radar-row {{ display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid {border_col}; font-family: monospace; font-size: 13px; text-decoration: none; color: {text_main}; transition: background 0.2s; background-color: {bg_panel}; }}
@@ -72,7 +73,7 @@ langs = {
         "warn_inf": "⚠️ YÜKSEK ENFLASYON RİSKİ: Tokenların çoğu kilitli, satış baskısı gelebilir.",
         "safe_inf": "✅ SAĞLIKLI DOLAŞIM: Token arzının büyük kısmı piyasada.",
         "sec_title": "SİSTEM GÜVENLİK ANALİZİ", "clean": "TEMİZ KOD", "danger": "YÜKSEK RİSK (HONEYPOT)",
-        "creator": "Kurucu Cüzdan", "web": "Web Adresi", "twitter": "X (Twitter)", "tg": "Telegram",
+        "creator": "Kurucu Cüzdan", "holders": "En Büyük Cüzdanlar (Top Holders)", "web": "Web Adresi", "twitter": "X (Twitter)", "tg": "Telegram",
         "radar_flow": "BALİNA RADARI (ALIM / SATIM)", "radar_contracts": "BALİNA RADARI (AKILLI KONTRATLAR)",
         "new_tokens": "AĞDA YENİ ÇIKAN TOKENLAR VE GÜVENLİK ANALİZİ",
         "scan_btn": "Sistemi Güncelle", "no_data": "Geçerli veri bulunamadı."
@@ -86,7 +87,7 @@ langs = {
         "warn_inf": "⚠️ HIGH INFLATION RISK: Majority of tokens are locked. Dump risk is high.",
         "safe_inf": "✅ HEALTHY CIRCULATION: Most of the supply is unlocked.",
         "sec_title": "SYSTEM SECURITY ANALYSIS", "clean": "CLEAN CODE", "danger": "HIGH RISK (HONEYPOT)",
-        "creator": "Deployer Wallet", "web": "Website", "twitter": "X (Twitter)", "tg": "Telegram",
+        "creator": "Deployer Wallet", "holders": "Top Holders", "web": "Website", "twitter": "X (Twitter)", "tg": "Telegram",
         "radar_flow": "WHALE RADAR (BUY / SELL)", "radar_contracts": "WHALE RADAR (SMART CONTRACTS)",
         "new_tokens": "NEWLY DEPLOYED TOKENS & SECURITY ANALYSIS",
         "scan_btn": "Update System", "no_data": "Valid data not found."
@@ -180,9 +181,8 @@ with col_input:
 with col_btn:
     search_clicked = st.button("🔎 " + t['search_btn'], use_container_width=True)
 
-# Butona basıldığında veya Enter yapıldığında çalışır
 if search_query or search_clicked:
-    if search_query: # Boş değilse işlemi başlat
+    if search_query:
         with st.spinner("Ağ taranıyor..."):
             token = search_token_dexscreener(search_query)
             if token:
@@ -193,7 +193,10 @@ if search_query or search_clicked:
                 st.markdown(f"<div style='font-size:24px; font-weight:600;'>{token['name']} <span style='color:{text_sub}; font-weight:400;'>{token['symbol']}</span></div>", unsafe_allow_html=True)
                 st.markdown(f"<div style='color:{text_sub}; font-family:monospace; font-size:13px; margin-top:2px;'>{token['address']}</div>", unsafe_allow_html=True)
                 
-                html_links = f"<div class='social-container'><a href='https://arbiscan.io/address/{token['address']}#code' target='_blank' class='social-btn'>[ {t['creator']} ]</a>"
+                html_links = f"<div class='social-container'>"
+                html_links += f"<a href='https://arbiscan.io/address/{token['address']}#code' target='_blank' class='social-btn'>[ {t['creator']} ]</a>"
+                html_links += f"<a href='https://arbiscan.io/token/{token['address']}#balances' target='_blank' class='social-btn holders-btn'>[ 👑 {t['holders']} ]</a>"
+                
                 info = token['info']
                 if info:
                     for web in info.get("websites", []): html_links += f"<a href='{web['url']}' target='_blank' class='social-btn'>[ {t['web']} ]</a>"
@@ -237,6 +240,8 @@ if search_query or search_clicked:
                 
                 # 3. SATIR: GÜVENLİK ANALİZİ
                 st.markdown(f"<div class='metric-label' style='font-size:13px;'>🛡️ {t['sec_title']}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='color:{text_sub}; font-size:11px; margin-bottom:10px;'>GoPlus Security API verileri baz alınmıştır.</div>", unsafe_allow_html=True)
+                
                 if security['is_honeypot']: st.markdown(f"<div class='sec-danger'><span style='color:#ef4444; font-weight:600;'>{t['danger']}</span> | Sistem Skoru: {security['score']}/100</div>", unsafe_allow_html=True)
                 else: st.markdown(f"<div class='sec-clean'><span style='color:#22c55e; font-weight:600;'>{t['clean']}</span> | Sistem Skoru: {security['score']}/100</div>", unsafe_allow_html=True)
                 
