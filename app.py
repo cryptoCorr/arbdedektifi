@@ -65,6 +65,7 @@ st.markdown(f"""
 langs = {
     "TR": {
         "search": "Hedef Ara (Token Sembolü veya Adresi):",
+        "search_btn": "SORGULA",
         "price": "FİYAT", "liq": "LİKİDİTE", "vol": "24S HACİM", "tax": "VERGİ (AL/SAT)",
         "supply_title": "MAKRO EKONOMİ & ARZ (TOKENOMICS)",
         "mcap": "PİYASA DEĞERİ (MCAP)", "fdv": "TAM SEYRELTİLMİŞ (FDV)", "ratio": "DOLAŞIM ORANI",
@@ -78,6 +79,7 @@ langs = {
     },
     "EN": {
         "search": "Search Target (Token Symbol or Address):",
+        "search_btn": "SEARCH",
         "price": "PRICE", "liq": "LIQUIDITY", "vol": "24H VOL", "tax": "TAX (B/S)",
         "supply_title": "MACRO ECONOMICS & SUPPLY",
         "mcap": "MARKET CAP", "fdv": "FULLY DILUTED (FDV)", "ratio": "CIRCULATION RATIO",
@@ -94,8 +96,15 @@ t = langs[lang_choice]
 
 # --- API FONKSİYONLARI ---
 def search_token_dexscreener(query):
+    query = query.strip()
     try:
-        res = requests.get(f"https://api.dexscreener.com/latest/dex/search?q={query}").json()
+        # Akıllı Yönlendirme: Adres mi İsim mi?
+        if query.startswith("0x") and len(query) == 42:
+            url = f"https://api.dexscreener.com/latest/dex/tokens/{query}"
+        else:
+            url = f"https://api.dexscreener.com/latest/dex/search?q={query}"
+            
+        res = requests.get(url).json()
         if res.get("pairs"):
             arb_pairs = [p for p in res["pairs"] if p.get("chainId") == "arbitrum"]
             if arb_pairs:
@@ -165,73 +174,79 @@ def update_system():
     st.session_state.new_tokens = st.session_state.new_tokens[:8]
 
 # --- 1. ANA EKRAN: ARAMA VE İSTİHBARAT ---
-search_query = st.text_input("", placeholder=t['search'])
+col_input, col_btn = st.columns([4, 1])
+with col_input:
+    search_query = st.text_input("", placeholder=t['search'], label_visibility="collapsed")
+with col_btn:
+    search_clicked = st.button("🔎 " + t['search_btn'], use_container_width=True)
 
-if search_query:
-    with st.spinner("Ağ taranıyor..."):
-        token = search_token_dexscreener(search_query)
-        if token:
-            security = check_security_goplus(token['address'])
-            st.markdown("<div class='panel-box'>", unsafe_allow_html=True)
-            
-            # KİMLİK & SOSYAL LİNKLER
-            st.markdown(f"<div style='font-size:24px; font-weight:600;'>{token['name']} <span style='color:{text_sub}; font-weight:400;'>{token['symbol']}</span></div>", unsafe_allow_html=True)
-            st.markdown(f"<div style='color:{text_sub}; font-family:monospace; font-size:13px; margin-top:2px;'>{token['address']}</div>", unsafe_allow_html=True)
-            
-            html_links = f"<div class='social-container'><a href='https://arbiscan.io/address/{token['address']}#code' target='_blank' class='social-btn'>[ {t['creator']} ]</a>"
-            info = token['info']
-            if info:
-                for web in info.get("websites", []): html_links += f"<a href='{web['url']}' target='_blank' class='social-btn'>[ {t['web']} ]</a>"
-                for social in info.get("socials", []):
-                    name = t['twitter'] if social['type'] == "twitter" else t['tg'] if social['type'] == "telegram" else "Link"
-                    html_links += f"<a href='{social['url']}' target='_blank' class='social-btn'>[ {name} ]</a>"
-            html_links += "</div>"
-            st.markdown(html_links, unsafe_allow_html=True)
-            
-            st.markdown(f"<hr style='border-color:{border_col}; margin:20px 0;'>", unsafe_allow_html=True)
-            
-            # 1. SATIR: PİYASA METRİKLERİ VE VERGİ
-            c1, c2, c3, c4 = st.columns(4)
-            with c1: st.markdown(f"<div class='metric-label'>{t['price']}</div><div class='metric-val'>${float(token['priceUsd']):.6f}</div>", unsafe_allow_html=True)
-            with c2: st.markdown(f"<div class='metric-label'>{t['liq']}</div><div class='metric-val'>{format_money(token['liquidity'])}</div>", unsafe_allow_html=True)
-            with c3: st.markdown(f"<div class='metric-label'>{t['vol']}</div><div class='metric-val'>{format_money(token['volume24h'])}</div>", unsafe_allow_html=True)
-            with c4: st.markdown(f"<div class='metric-label'>{t['tax']}</div><div class='metric-val txt-muted'>%{security['buy_tax']} / %{security['sell_tax']}</div>", unsafe_allow_html=True)
+# Butona basıldığında veya Enter yapıldığında çalışır
+if search_query or search_clicked:
+    if search_query: # Boş değilse işlemi başlat
+        with st.spinner("Ağ taranıyor..."):
+            token = search_token_dexscreener(search_query)
+            if token:
+                security = check_security_goplus(token['address'])
+                st.markdown("<div class='panel-box'>", unsafe_allow_html=True)
+                
+                # KİMLİK & SOSYAL LİNKLER
+                st.markdown(f"<div style='font-size:24px; font-weight:600;'>{token['name']} <span style='color:{text_sub}; font-weight:400;'>{token['symbol']}</span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='color:{text_sub}; font-family:monospace; font-size:13px; margin-top:2px;'>{token['address']}</div>", unsafe_allow_html=True)
+                
+                html_links = f"<div class='social-container'><a href='https://arbiscan.io/address/{token['address']}#code' target='_blank' class='social-btn'>[ {t['creator']} ]</a>"
+                info = token['info']
+                if info:
+                    for web in info.get("websites", []): html_links += f"<a href='{web['url']}' target='_blank' class='social-btn'>[ {t['web']} ]</a>"
+                    for social in info.get("socials", []):
+                        name = t['twitter'] if social['type'] == "twitter" else t['tg'] if social['type'] == "telegram" else "Link"
+                        html_links += f"<a href='{social['url']}' target='_blank' class='social-btn'>[ {name} ]</a>"
+                html_links += "</div>"
+                st.markdown(html_links, unsafe_allow_html=True)
+                
+                st.markdown(f"<hr style='border-color:{border_col}; margin:20px 0;'>", unsafe_allow_html=True)
+                
+                # 1. SATIR: PİYASA METRİKLERİ
+                c1, c2, c3, c4 = st.columns(4)
+                with c1: st.markdown(f"<div class='metric-label'>{t['price']}</div><div class='metric-val'>${float(token['priceUsd']):.6f}</div>", unsafe_allow_html=True)
+                with c2: st.markdown(f"<div class='metric-label'>{t['liq']}</div><div class='metric-val'>{format_money(token['liquidity'])}</div>", unsafe_allow_html=True)
+                with c3: st.markdown(f"<div class='metric-label'>{t['vol']}</div><div class='metric-val'>{format_money(token['volume24h'])}</div>", unsafe_allow_html=True)
+                with c4: st.markdown(f"<div class='metric-label'>{t['tax']}</div><div class='metric-val txt-muted'>%{security['buy_tax']} / %{security['sell_tax']}</div>", unsafe_allow_html=True)
 
-            st.markdown(f"<hr style='border-color:{border_col}; margin:20px 0;'>", unsafe_allow_html=True)
-            
-            # 2. SATIR: ARZ VE TOKENOMICS (YENİ EKLENDİ)
-            fdv = float(token.get('fdv', 0))
-            mcap = float(token.get('marketCap', 0))
-            if mcap == 0 and fdv > 0: mcap = fdv # Eğer API mcap vermediyse FDV'ye eşitle
-            
-            ratio = (mcap / fdv * 100) if fdv > 0 else 100
-            ratio_color = "#ef4444" if ratio < 40 else "#22c55e" # %40 altı tehlikeli
-            
-            st.markdown(f"<div class='metric-label' style='font-size:13px;'>🏦 {t['supply_title']}</div>", unsafe_allow_html=True)
-            s1, s2, s3 = st.columns(3)
-            with s1: st.markdown(f"<div class='metric-label'>{t['mcap']}</div><div class='metric-val'>{format_money(mcap)}</div>", unsafe_allow_html=True)
-            with s2: st.markdown(f"<div class='metric-label'>{t['fdv']}</div><div class='metric-val'>{format_money(fdv)}</div>", unsafe_allow_html=True)
-            with s3: st.markdown(f"<div class='metric-label'>{t['ratio']}</div><div class='metric-val' style='color:{ratio_color};'>%{ratio:.1f}</div>", unsafe_allow_html=True)
-            
-            if ratio < 40 and fdv > 0:
-                st.markdown(f"<div class='supply-warn'>{t['warn_inf']}</div>", unsafe_allow_html=True)
-            elif ratio >= 80 and fdv > 0:
-                st.markdown(f"<div class='supply-safe'>{t['safe_inf']}</div>", unsafe_allow_html=True)
+                st.markdown(f"<hr style='border-color:{border_col}; margin:20px 0;'>", unsafe_allow_html=True)
+                
+                # 2. SATIR: ARZ VE TOKENOMICS
+                fdv = float(token.get('fdv', 0))
+                mcap = float(token.get('marketCap', 0))
+                if mcap == 0 and fdv > 0: mcap = fdv
+                
+                ratio = (mcap / fdv * 100) if fdv > 0 else 100
+                ratio_color = "#ef4444" if ratio < 40 else "#22c55e"
+                
+                st.markdown(f"<div class='metric-label' style='font-size:13px;'>🏦 {t['supply_title']}</div>", unsafe_allow_html=True)
+                s1, s2, s3 = st.columns(3)
+                with s1: st.markdown(f"<div class='metric-label'>{t['mcap']}</div><div class='metric-val'>{format_money(mcap)}</div>", unsafe_allow_html=True)
+                with s2: st.markdown(f"<div class='metric-label'>{t['fdv']}</div><div class='metric-val'>{format_money(fdv)}</div>", unsafe_allow_html=True)
+                with s3: st.markdown(f"<div class='metric-label'>{t['ratio']}</div><div class='metric-val' style='color:{ratio_color};'>%{ratio:.1f}</div>", unsafe_allow_html=True)
+                
+                if ratio < 40 and fdv > 0:
+                    st.markdown(f"<div class='supply-warn'>{t['warn_inf']}</div>", unsafe_allow_html=True)
+                elif ratio >= 80 and fdv > 0:
+                    st.markdown(f"<div class='supply-safe'>{t['safe_inf']}</div>", unsafe_allow_html=True)
 
-            st.markdown(f"<hr style='border-color:{border_col}; margin:20px 0;'>", unsafe_allow_html=True)
-            
-            # 3. SATIR: GÜVENLİK ANALİZİ
-            st.markdown(f"<div class='metric-label' style='font-size:13px;'>🛡️ {t['sec_title']}</div>", unsafe_allow_html=True)
-            if security['is_honeypot']: st.markdown(f"<div class='sec-danger'><span style='color:#ef4444; font-weight:600;'>{t['danger']}</span> | Sistem Skoru: {security['score']}/100</div>", unsafe_allow_html=True)
-            else: st.markdown(f"<div class='sec-clean'><span style='color:#22c55e; font-weight:600;'>{t['clean']}</span> | Sistem Skoru: {security['score']}/100</div>", unsafe_allow_html=True)
-            
-            st.markdown("</div>", unsafe_allow_html=True)
-            
-            # GRAFİK
-            chart_theme = "dark" if theme_choice == "Karanlık" else "light"
-            components.iframe(f"https://dexscreener.com/arbitrum/{token['pairAddress']}?embed=1&theme={chart_theme}", height=450, scrolling=False)
-        else:
-            st.error(t['no_data'])
+                st.markdown(f"<hr style='border-color:{border_col}; margin:20px 0;'>", unsafe_allow_html=True)
+                
+                # 3. SATIR: GÜVENLİK ANALİZİ
+                st.markdown(f"<div class='metric-label' style='font-size:13px;'>🛡️ {t['sec_title']}</div>", unsafe_allow_html=True)
+                if security['is_honeypot']: st.markdown(f"<div class='sec-danger'><span style='color:#ef4444; font-weight:600;'>{t['danger']}</span> | Sistem Skoru: {security['score']}/100</div>", unsafe_allow_html=True)
+                else: st.markdown(f"<div class='sec-clean'><span style='color:#22c55e; font-weight:600;'>{t['clean']}</span> | Sistem Skoru: {security['score']}/100</div>", unsafe_allow_html=True)
+                
+                st.markdown("</div>", unsafe_allow_html=True)
+                
+                # GRAFİK
+                chart_theme = "dark" if theme_choice == "Karanlık" else "light"
+                components.iframe(f"https://dexscreener.com/arbitrum/{token['pairAddress']}?embed=1&theme={chart_theme}", height=450, scrolling=False)
+            else:
+                st.error(t['no_data'])
 
 # --- 2. ORTA BÖLÜM: BALİNA RADARI ---
 st.markdown(f"<br>", unsafe_allow_html=True)
